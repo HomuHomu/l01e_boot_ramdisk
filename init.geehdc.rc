@@ -1,0 +1,289 @@
+import /init.gee.rc
+import /init.gee_g.rc
+import /init.lge.rc
+
+on init
+    # Set permissions for persist partition
+    mkdir /persist 0771 system system
+    export EXTERNAL_ADD_STORAGE /storage/external_SD
+    export EXTERNAL_STORAGE_DOCOMO /storage/external_SD
+    mkdir /storage/external_SD 0000 system system
+
+on post-fs
+# LGE_CHANGE_S, 20120615, jinmo.koo@lge.com, enabling remotelock as dev-admin
+    mkdir /data/system 0775 system system
+# LGE_CHANGE_E, 20120615, jinmo.koo@lge.com, enabling remotelock as dev-admin
+
+on boot-pause
+    exec system/bin/battery_charging
+# LGE_CHANGE_S, 20121108, woo.jung@lge.com, change time of formatting special partition
+on emmc-fmt
+    exec /sbin/setup_fs \
+        /dev/block/platform/msm_sdcc.1/by-name/felica \
+        /dev/block/platform/msm_sdcc.1/by-name/seclog \
+        /dev/block/platform/msm_sdcc.1/by-name/mmbi \
+        no_reboot
+# LGE_CHANGE_E, 20121108, woo.jung@lge.com, change time of formatting special partition
+on boot
+    chmod 0660 /dev/ttyGS0
+    chown system system /dev/ttyGS0
+# LGE_CHANGE_S, 20120508, bonkang.koo@lge.com
+
+#LGE_CHANGE_S, 20120720, yongjoon.lee@lge.com, get usb lock status
+		chown system system /sys/devices/platform/lg_diag_cmd/diag_enable
+			chmod 0660 /sys/devices/platform/lg_diag_cmd/diag_enable
+#LGE_CHANGE_E, 20120720, yongjoon.lee@lge.com, get usb lock status
+
+# LGE_CHANGE_S, 20120629, hojin.ryu@lge.com,Set the status of backlight brightness when boot
+#brightness properties 
+	setprop ro.lge.lcd_default_brightness 154
+	setprop ro.lge.lcd_auto_brightness_mode false
+# LGE_CHANGE_E, 20120629, hojin.ryu@lge.com,Set the status of backlight brightness when boot
+
+# LGE_CHANGE_S, 20120203, chaeuk.lee@lge.com, permission for IrDA tty driver
+    chmod 664 /dev/ttyHSL1
+    chown system system /dev/ttyHSL1
+# LGE_CHANGE_E, 20120203, chaeuk.lee@lge.com
+
+# LGE_CHANGE_S, 20120402, chaeuk.lee@lge.com, permission for IrDA factory procfs
+    chown system system /proc/lge_irda_factory
+# LGE_CHANGE_E, 20120402, chaeuk.lee@lge.com
+
+# LGE_CHANGE_S, 20120611, eunsang.kim@lge.com, To support SD card
+# The support of external sd
+#    mkdir /data/media/external_sd 0000 system system
+# LGE_UPDATE_E, 20120611, eunsang.kim@lge.com
+
+# LGE_CHANGE_S, 20120611, eunsang.kim@lge.com, To support SDXC exFAT Filesystem. install Linux Driver Module
+    insmod /system/lib/modules/texfat.ko
+# LGE_CHANGE_E, 20120611, eunsang.kim@lge.com
+
+# LGE_CHANGE_S, 20130109, hyjnho.choi@lge.com, permission for Power LED
+    chown system system /sys/class/leds/led:blue/brightness    
+
+    chown system system /sys/class/leds/button-backlight/max_brightness
+    chown system system /sys/class/leds/led:red/max_brightness
+    chown system system /sys/class/leds/led:green/max_brightness
+    chown system system /sys/class/leds/led:blue/max_brightness
+# LGE_CHANGE_E, 20130109, hyjnho.choi@lge.com
+
+# LGE_CHANGE_S, 20120615, jinmo.koo@lge.com, enabling remotelock as dev-admin
+service init_devadmin /system/bin/sh /system/vendor/bin/init_devadmin.sh
+    class main
+    user system
+    group system
+    oneshot
+# LGE_CHANGE_E, 20120615, jinmo.koo@lge.com, enabling remotelock as dev-admin
+
+# LGE_CHANGE_S, 20121220, bonkang.koo@lge.com, add felica and seclog and mmbi partition 
+
+on fs-etc
+# create mountpoint for felica and seclog
+    mkdir /felica 0771 system system
+    mkdir /seclog 0771 system system
+# create mountpoint for mmb
+    mkdir /data/mmb
+    mkdir /data/mmb/Mmb01eg 0700 casdrm mmb
+    mkdir /data/mmb/MmbFcCtlMw 0700 fcctl mmb
+    mkdir /data/mmb/MmbStCtlMw 0700 stctl mmb
+    mkdir /data/mmb/MmbFcMp4Mw 0700 fcmp4 mmb
+    mkdir /data/mmb/common 0777 root mmb
+    chown root mmb /data/mmb
+    chmod 777 /data/mmb
+    mkdir /data/mmb/MmbFcCtlMwMnt 0755 system system
+# mount felica and seclog and mmb partition
+    mount_all fstab_dcm.qcom
+# give system chown for felica and seclog
+    chown system system /felica
+    chmod 0775 /felica
+    chown system system /seclog
+    chmod 0771 /seclog
+# give system chown for mmb
+    chown fcctl mmb /data/mmb/MmbFcCtlMwMnt
+    chmod 0700 /data/mmb/MmbFcCtlMwMnt
+
+# LGE_CHANGE_E, 20121220, bonkang.koo@lge.com, add felica and seclog and mmbi partition
+
+# LGE_CHANGE_S, 20120524 joosung.park@lge.com
+   mkdir /felica/annoying 0770 felicalock felicalock
+   mkdir /felica/knife 0771 system radio
+# LGE_CHANGE_E, 20120524 joosung.park@lge.com
+# LGE_CHANGE_S, 20120620, jaejyn.shin@lge.com, TOMOYO Linux log directory
+# create ccs
+	mkdir /seclog/ccs 0755 root root
+	mkdir /seclog/ccs/audit 0755 root root
+# LGE_CHANGE_E, 20120620, jaejyn.shin@lge.com, TOMOYO Linux log directory
+# NFC Feature
+#   chmod 0666 /dev/pn544
+#   setprop ro.nfc.port I2C
+# LGE_CHANGE_S, 20120622, QCT_BT_CNDTL_PATCH_DCM_SCMST, Qualcomm SCMS-T patch kyungrin.seo@lge.com
+    setprop service.brcm.bt.a2dp_scms_t 0
+    setprop service.brcm.bt.a2dp_con 0
+# LGE_CHANGE_E
+
+# LGE_CHANGE_S, 20111118, smorke@lge.com, SMPL counter
+service smpl_count /system/bin/smpl_count
+    oneshot
+# LGE_CHANGE_E, 20111118, smorke@lge.com
+
+#  onrestart restart media
+service qcamerasvr /system/bin/mm-qcamera-daemon
+    class late_start
+    user camera
+    group camera system inet input
+
+# LGE_CHANGE_S, 20120203, chaeuk.lee@lge.com, daemon for IrDA obex
+service objectexchanged /system/bin/objectexchanged
+    user system
+    group radio system
+    class core
+# LGE_CHANGE_E, 20120203, chaeuk.lee@lge.com
+
+# LGE_CHANGE_S, 20120203, chaeuk.lee@lge.com, property for IrDA obex
+on property:sys.irda.config=enable
+    exec /system/bin/ifconfig irda0 up
+    write /proc/sys/net/irda/devname "DOCOMO/L-01E/n"
+    write /proc/sys/net/irda/max_tx_data_size 2048
+    write /proc/sys/net/irda/discovery_timeout 1
+
+on property:sys.irda.config=disable
+    exec /system/bin/ifconfig irda0 down
+    write /proc/sys/net/irda/devname "Linux"
+    write /proc/sys/net/irda/max_tx_data_size 2042
+    write /proc/sys/net/irda/discovery_timeout 3
+
+on property:sys.irda.discovery=start
+    write /proc/sys/net/irda/discovery 1
+
+on property:sys.irda.discovery=stop
+    write /proc/sys/net/irda/discovery 0
+# LGE_CHANGE_E, 20120203, chaeuk.lee@lge.com
+
+on property:ro.build.type=eng
+    # 3LM settings
+    setprop ro.3lm.production 0
+    setprop ro.3lm.build.lg true
+    setprop ro.3LM.extended 1
+    setprop ro.camera.sound.forced 1
+    setprop ro.3LM.oem_manifest 3
+    setprop ro.3LM.address c2.z.3lm.com
+    # 3LM encryption
+    setprop ro.3lm.legacy_encryption 1
+
+on property:ro.build.type=userdebug
+    # 3LM settings
+    setprop ro.3lm.production 0
+    setprop ro.3lm.build.lg true
+    setprop ro.3LM.extended 1
+    setprop ro.camera.sound.forced 1
+    setprop ro.3LM.oem_manifest 3
+    setprop ro.3LM.address c2.z.3lm.com
+    # 3LM encryption
+    setprop ro.3lm.legacy_encryption 1
+
+on property:ro.build.type=user
+    # 3LM settings
+    setprop ro.3lm.production 1
+    setprop ro.3lm.build.lg true
+    setprop ro.3LM.extended 1
+    setprop ro.camera.sound.forced 1
+    setprop ro.3LM.oem_manifest 3
+    setprop ro.3LM.address c2.z.3lm.com
+    # 3LM encryption
+    setprop ro.3lm.legacy_encryption 1
+# LGE_CHANGE_S, 20120504, hyewon.eum@lge.com oneseg porting
+service broadcast /system/bin/libbroadcast_server
+    class main
+    user media
+    group system audio media graphics sdcard_rw
+# LGE_CHANGE_E, 20120504, hyewon.eum@lge.com
+
+# LGE_BROADCAST_MMBI {
+# mmbrildservice 
+on post-fs
+
+service mmbrildservice /system/bin/libMmb_rild_service
+    class main
+    user root
+    oneshot
+
+on boot
+	chmod 666 /dev/socket/rild-cas
+
+service mmbcacasdrmmw /system/bin/MmbCaCasDrmMw
+	class main
+	socket MmbCaCasDrmMw stream 666
+	user root
+	group mmb radio drmrpc
+
+service mmbfcctlmw /system/bin/MmbFcCtlMw
+	class main
+	user root
+	group mmb radio drmrpc
+
+service mmbstservice /system/bin/MmbStCtlMwService
+	class main
+	user root
+	group mmb radio drmrpc
+
+service mmbmp4 /system/bin/MmbFcMp4MwServer
+	class main
+	user root
+	group mmb radio drmrpc
+
+service mmbfclicemw /system/bin/MmbFcLiceMwServer
+	class main
+	user root
+	group mmb radio drmrpc
+
+service qrngd /system/bin/qrngd -f
+	class main
+	user root
+    group root mmb
+# LGE_BROADCAST_MMBI }
+
+# LGE_CHANGE_S, 20120620, jaejyn.shin@lge.com, TOMOYO Linux log daemon starting
+service ccs-auditd /system/bin/ccs-auditd
+	class core
+	oneshot
+# LGE_CHANGE_E, 20120620, jaejyn.shin@lge.com, TOMOYO Linux log daemon starting
+########################################
+# CAPP_UNINSTALL_PRELOADED             #
+########################################
+
+# hunibest.kim 20110227 VirusScanPorting
+service mfescand /system/bin/mfescand
+    class main
+    socket mfescand stream 600 system system
+# LGE_CHANGE_S, [LGE_MODEL][CAPP_POSTINSTALL_MODIFIED], haksu.kim@lg    e.com, 2012-06-05
+service postinstaller /system/vendor/bin/postinstaller.sh
+    disabled
+    oneshot
+
+on property:vold.post_fs_data_done=1
+    start postinstaller
+
+# LGE_CHANGE_S, 20120810 bonkang.koo@lge.com, factory reset magic code
+on property:sys.factory=1
+    exec /system/bin/dd if=/system/etc/factory_reset_magic of=/dev/block/platform/msm_sdcc.1/by-name/reserved bs=512 count=1
+# LGE_CHANGE_E, 20120810 bonkang.koo@lge.com, factory reset magic code
+#LGE_CHANGE_S, minjeon.kim@lge.com 2012-06-29 for performance
+write /proc/sys/net/ipv4/tcp_low_latency 1
+
+# Define TCP buffer sizes for various networks
+#   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
+    setprop net.tcp.buffersize.default 4096,87380,110208,4096,16384,110208
+    setprop net.tcp.buffersize.lte     4094,87380,3461120,4096,140625,3461120
+    setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
+    setprop net.tcp.buffersize.hspa    4094,87380,1220608,4096,140625,1220608
+    setprop net.tcp.buffersize.hsupa   4094,87380,1220608,4096,140625,1220608
+    setprop net.tcp.buffersize.hsdpa   4094,87380,1220608,4096,140625,1220608
+    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
+    setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
+
+    write /proc/sys/net/core/rmem_max  3461120
+    write /proc/sys/net/core/wmem_max  3461120
+#LGE_CHANGE_E, minjeon.kim@lge.com 2012-06-29 for performance
+
+#LGE_CHANGE_E, minjeon.kim@lge.com 2012-06-29 for performance
+

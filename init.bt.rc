@@ -1,0 +1,29 @@
+service bluetoothd /system/bin/bluetoothd -n
+    class main
+    socket bluetooth stream 660 bluetooth bluetooth
+    socket dbus_bluetooth stream 660 bluetooth bluetooth
+    # init.rc does not yet support applying capabilities, so run as root and
+    # let bluetoothd drop uid to bluetooth with the right linux capabilities
+    group bluetooth net_bt_admin misc
+    disabled
+
+service config_bluetooth /system/bin/sh /system/etc/init.qcom.bt.sh "onboot"
+    class core
+    user root
+    oneshot
+
+# LGE: LGBT_COMMON_FUNCTION_ADDR_LGFTM, [20110129, sh.shin@lge.com], read MAC address from LGFTM
+service hciattach /system/bin/sh /system/etc/init.qcom.bt.sh
+    class late_start
+    user bluetooth
+    group qcom_oncrpc bluetooth net_bt_admin system
+    disabled
+    oneshot
+
+# LGE_S: LGBT_COMMON_LGTEST_DUTMODE, [sh.shin@lge.com 20111116] Enable BT DUT mode
+service hciattach_dut /system/bin/sh /system/etc/init.lge_dut.bt.sh
+    user bluetooth
+    group qcom_oncrpc bluetooth net_bt_admin
+    disabled
+    oneshot
+
