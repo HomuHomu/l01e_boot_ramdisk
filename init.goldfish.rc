@@ -1,10 +1,22 @@
+
 on early-init
-    export EXTERNAL_STORAGE /mnt/sdcard
-    mkdir /mnt/sdcard 0000 system system
-    # for backwards compatibility
-    symlink /mnt/sdcard /sdcard
+    mount debugfs debugfs /sys/kernel/debug
+
+on init
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /storage/sdcard 0555 root root
+
+    export EXTERNAL_STORAGE /storage/sdcard
+
+    # Support legacy paths
+    symlink /storage/sdcard /sdcard
+    symlink /storage/sdcard /mnt/sdcard
 
 on boot
+    setsebool in_qemu 1
+    restorecon /sys/qemu_trace/process_name
+    restorecon /sys/qemu_trace/state
+    restorecon /sys/qemu_trace/symbol
     setprop ARGH ARGH
     setprop net.eth0.gw 10.0.2.2
     setprop net.eth0.dns1 10.0.2.3
@@ -12,10 +24,7 @@ on boot
     setprop ro.radio.use-ppp no
     setprop ro.build.product generic
     setprop ro.product.device generic
-# BRCM_INITIAL_PORTING
-#+++ BRCM
-    mkdir /data/misc/dhcp 0770 dhcp dhcp
-#--- BRCM
+
 # fake some battery state
     setprop status.battery.state Slow
     setprop status.battery.level 5
@@ -50,6 +59,9 @@ on boot
 # supported, and arbitrary breakage may result if you specify
 # something else.
 
+on fs
+        mount_all /fstab.goldfish
+
 service goldfish-setup /system/etc/init.goldfish.sh
     user root
     group root
@@ -79,47 +91,3 @@ service qemud /system/bin/qemud
 
 service goldfish-logcat /system/bin/logcat -Q
     oneshot
-
-#+++ BRCM
-#service hciattach /system/bin/brcm_patchram_plus --enable_hci --enable_lpm \
-#    --baudrate 3000000 --patchram /vendor/firmware/bcm4329.hcd /dev/s3c2410_serial0
-#    class main
-#    user bluetooth
-##    group bluetooth net_bt_admin
-#    disabled
-#    oneshot
-
-# Make sure we startup btld before bluetoothd
-# Set target address to emulator host loopback IF
-# Limit baudrate to 460800 to ensure reliable uart operation 
-#service btld /system/bin/logwrapper /system/bin/btld -hwtun 10.0.2.2 #-hb 460800
-#service btld /system/bin/logwrapper /system/bin/btld -hb 3000000 -pf /system/bin/CM4334B0_0368_TestConfig.hcd #-lpm 1
-service btld /system/bin/logwrapper /system/bin/btld -hb 4000000 -pf /system/bin/BCM4334B0_002.001.013.0271.0333.hcd #-lpm 1
-    user root
-    group bluetooth net_bt_admin
-    disabled
-    oneshot
-
-# start btld if soft_onoff is enabled
-on property:service.brcm.bt.soft_onoff=1
-    start btld
-
-# stop btld if soft_onoff is disabled
-#on property:service.brcm.bt.soft_onoff=0
-#    stop btld
-
-#STOPSHIP: Remove logwrapper and -d option before production
-service bluetoothd /system/bin/logwrapper /system/bin/bluetoothd -d -n
-    class main
-    socket bluetooth stream 660 bluetooth bluetooth
-    socket dbus_bluetooth stream 660 bluetooth bluetooth
-# init.rc does not yet support applying capabilities, so run as root and
-# let bluetoothd drop uid to bluetooth with the right linux capabilities
-    group bluetooth net_bt_admin misc
-    disabled
-
-service dhcpcd /system/bin/dhcpcd -B
-group dhcp wifi system bluetooth
-disabled
-oneshot
-#--- BRCM
